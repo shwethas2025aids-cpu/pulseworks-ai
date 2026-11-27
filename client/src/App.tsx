@@ -1,5 +1,6 @@
 
 import { useState } from 'react'
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
@@ -7,6 +8,8 @@ import SystemBanner from './components/SystemBanner'
 
 import Dashboard from './pages/Dashboard'
 import Tasks from './pages/Tasks'
+import Analytics from './pages/Analytics'
+import Settings from './pages/Settings'
 
 import type { Task } from './types/task'
 
@@ -45,30 +48,28 @@ const initialTasks: Task[] = [
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [activePage, setActivePage] = useState('Dashboard')
   const [openCreateForm, setOpenCreateForm] = useState(false)
-
-  // Shared task state: survives navigation between pages.
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
 
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const handleCreateNew = () => {
-    setActivePage('My Tasks')
+    navigate('/tasks')
     setOpenCreateForm(true)
   }
 
   const handleSaveTask = (updatedTask: Task) => {
     setTasks((currentTasks) => {
-      const existingTask = currentTasks.some(
+      const exists = currentTasks.some(
         (task) => task.id === updatedTask.id
       )
 
-      if (existingTask) {
-        return currentTasks.map((task) =>
-          task.id === updatedTask.id ? updatedTask : task
-        )
-      }
-
-      return [updatedTask, ...currentTasks]
+      return exists
+        ? currentTasks.map((task) =>
+            task.id === updatedTask.id ? updatedTask : task
+          )
+        : [updatedTask, ...currentTasks]
     })
   }
 
@@ -89,37 +90,7 @@ function App() {
     )
   }
 
-  const renderPage = () => {
-    switch (activePage) {
-      case 'Dashboard':
-        return <Dashboard onCreateNew={handleCreateNew} />
-
-      case 'My Tasks':
-        return (
-          <Tasks
-            tasks={tasks}
-            onSaveTask={handleSaveTask}
-            onStatusChange={handleStatusChange}
-            onDelete={handleDeleteTask}
-            openCreateForm={openCreateForm}
-            onCreateFormOpened={() => setOpenCreateForm(false)}
-          />
-        )
-
-      default:
-        return (
-          <section className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-            <h1 className="text-2xl font-bold text-slate-900">
-              {activePage}
-            </h1>
-
-            <p className="mt-2 text-sm text-slate-500">
-              This workspace module is planned for a future development phase.
-            </p>
-          </section>
-        )
-    }
-  }
+  const activeItem = location.pathname
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -129,8 +100,8 @@ function App() {
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
-          activeItem={activePage}
-          onNavigate={setActivePage}
+          activeItem={activeItem}
+          onNavigate={navigate}
         />
 
         <main className="min-w-0 flex-1 px-4 py-8 md:px-8">
@@ -146,7 +117,51 @@ function App() {
             <SystemBanner />
           </div>
 
-          {renderPage()}
+          <Routes>
+            <Route
+              path="/"
+              element={<Dashboard onCreateNew={handleCreateNew} />}
+            />
+
+            <Route
+              path="/tasks"
+              element={
+                <Tasks
+                  tasks={tasks}
+                  onSaveTask={handleSaveTask}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDeleteTask}
+                  openCreateForm={openCreateForm}
+                  onCreateFormOpened={() => setOpenCreateForm(false)}
+                />
+              }
+            />
+
+            <Route
+              path="/analytics"
+              element={<Analytics tasks={tasks} />}
+            />
+
+            <Route
+              path="/settings"
+              element={<Settings />}
+            />
+
+            <Route
+              path="*"
+              element={
+                <div className="rounded-2xl border bg-white p-8 text-center">
+                  <h1 className="text-2xl font-bold">Page not found</h1>
+                  <button
+                    onClick={() => navigate('/')}
+                    className="mt-4 rounded-lg bg-blue-600 px-5 py-2 text-white"
+                  >
+                    Back to Dashboard
+                  </button>
+                </div>
+              }
+            />
+          </Routes>
         </main>
       </div>
     </div>
